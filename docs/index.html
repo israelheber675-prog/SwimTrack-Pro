@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SwimTrack Pro – מערכת ניהול שיעורי שחייה</title>
+  <meta name="description" content="SwimTrack Pro V28 – מערכת ניהול שיעורי שחייה מקצועית עם סילבוס חכם, נוכחות, קרדיטים, דוחות WhatsApp ועוד.">
+  <style>
+    :root {
+      --teal:  #4ECDC4;
+      --dark:  #0f2027;
+      --mid:   #16213e;
+      --card:  rgba(255,255,255,0.07);
+      --border:rgba(255,255,255,0.12);
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+
+    body {
+      font-family:'Segoe UI',Arial,sans-serif;
+      background: linear-gradient(160deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+      color:#e0e0e0;
+      min-height:100vh;
+      direction:rtl;
+    }
+
+    /* NAV */
+    nav {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:16px 40px;
+      background:rgba(0,0,0,0.3);
+      backdrop-filter:blur(10px);
+      position:sticky; top:0; z-index:99;
+      border-bottom:1px solid var(--border);
+    }
+    .nav-logo { font-size:1.2rem; font-weight:700; color:var(--teal); display:flex; align-items:center; gap:10px; }
+    .nav-links a {
+      color:rgba(255,255,255,0.7);
+      text-decoration:none;
+      margin-right:24px;
+      font-size:0.9rem;
+      transition:color .2s;
+    }
+    .nav-links a:hover { color:var(--teal); }
+
+    /* HERO */
+    .hero {
+      text-align:center;
+      padding:100px 24px 80px;
+    }
+    .hero-icon { font-size:5rem; margin-bottom:20px; }
+    .hero h1 {
+      font-size:3rem;
+      font-weight:800;
+      background:linear-gradient(90deg,#4ECDC4,#44d3ff);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      margin-bottom:12px;
+    }
+    .hero p {
+      font-size:1.2rem;
+      color:rgba(255,255,255,0.65);
+      max-width:560px;
+      margin:0 auto 40px;
+      line-height:1.7;
+    }
+    .hero-btns { display:flex; gap:16px; justify-content:center; flex-wrap:wrap; }
+    .btn {
+      padding:14px 32px;
+      border-radius:12px;
+      font-size:1rem;
+      font-weight:600;
+      text-decoration:none;
+      border:none;
+      cursor:pointer;
+      transition:all .2s;
+    }
+    .btn-primary {
+      background:linear-gradient(135deg,#4ECDC4,#44a8a1);
+      color:#fff;
+      box-shadow:0 4px 20px rgba(78,205,196,.4);
+    }
+    .btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(78,205,196,.55); }
+    .btn-ghost {
+      background:var(--card);
+      color:#ddd;
+      border:1px solid var(--border);
+    }
+    .btn-ghost:hover { background:rgba(255,255,255,.15); }
+
+    /* BADGE ROW */
+    .badges { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:28px; }
+    .badge {
+      background:rgba(78,205,196,.15);
+      color:var(--teal);
+      border:1px solid rgba(78,205,196,.3);
+      padding:5px 14px;
+      border-radius:20px;
+      font-size:0.8rem;
+    }
+
+    /* SECTION */
+    section { padding:80px 24px; max-width:1100px; margin:0 auto; }
+    .section-title {
+      font-size:1.8rem;
+      font-weight:700;
+      color:#fff;
+      text-align:center;
+      margin-bottom:48px;
+    }
+    .section-title span { color:var(--teal); }
+
+    /* FEATURE GRID */
+    .features {
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+      gap:20px;
+    }
+    .feature-card {
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:28px 24px;
+      transition:transform .2s, border-color .2s;
+    }
+    .feature-card:hover { transform:translateY(-4px); border-color:var(--teal); }
+    .feature-icon { font-size:2.2rem; margin-bottom:12px; }
+    .feature-title { font-size:1.05rem; font-weight:600; color:#fff; margin-bottom:8px; }
+    .feature-desc  { font-size:0.88rem; color:rgba(255,255,255,.55); line-height:1.6; }
+
+    /* SETUP STEPS */
+    .steps-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+      gap:16px;
+    }
+    .step-card {
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:24px;
+      text-align:center;
+    }
+    .step-num {
+      width:44px; height:44px;
+      background:linear-gradient(135deg,#4ECDC4,#44a8a1);
+      border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-weight:800; font-size:1.1rem; color:#000;
+      margin:0 auto 14px;
+    }
+    .step-title { font-size:0.95rem; font-weight:600; color:#fff; margin-bottom:6px; }
+    .step-desc  { font-size:0.82rem; color:rgba(255,255,255,.5); line-height:1.5; }
+    .step-code  {
+      background:rgba(0,0,0,.4);
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:8px;
+      padding:8px 12px;
+      margin-top:10px;
+      font-family:monospace;
+      font-size:0.8rem;
+      color:var(--teal);
+      direction:ltr;
+      text-align:left;
+    }
+
+    /* ROLE TABLE */
+    .roles-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+      gap:16px;
+    }
+    .role-card {
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:24px;
+    }
+    .role-badge {
+      display:inline-block;
+      padding:4px 14px;
+      border-radius:20px;
+      font-size:0.8rem;
+      font-weight:600;
+      margin-bottom:14px;
+    }
+    .badge-super { background:rgba(255,215,0,.15); color:#FFD700; border:1px solid rgba(255,215,0,.3); }
+    .badge-mgr   { background:rgba(78,205,196,.15); color:#4ECDC4; border:1px solid rgba(78,205,196,.3); }
+    .badge-inst  { background:rgba(100,149,237,.15); color:#6495ED; border:1px solid rgba(100,149,237,.3); }
+    .role-name { font-size:1.05rem; font-weight:700; color:#fff; margin-bottom:10px; }
+    .role-perms { list-style:none; }
+    .role-perms li { font-size:0.82rem; color:rgba(255,255,255,.55); padding:4px 0; }
+    .role-perms li::before { content:"✓ "; color:var(--teal); }
+
+    /* FOOTER */
+    footer {
+      text-align:center;
+      padding:40px 24px;
+      border-top:1px solid var(--border);
+      color:rgba(255,255,255,.3);
+      font-size:0.85rem;
+    }
+    footer a { color:var(--teal); text-decoration:none; }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">🏊 SwimTrack Pro</div>
+  <div class="nav-links">
+    <a href="#features">תכונות</a>
+    <a href="#setup">התקנה</a>
+    <a href="#roles">תפקידים</a>
+    <a href="https://github.com/israelheber675-prog/SwimTrack-Pro">GitHub</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-icon">🏊</div>
+  <h1>SwimTrack Pro</h1>
+  <p>מערכת ניהול שיעורי שחייה מקצועית – לסופר-מנהלים, מנהלים ומדריכים</p>
+  <div class="hero-btns">
+    <a href="https://github.com/israelheber675-prog/SwimTrack-Pro/archive/refs/heads/main.zip"
+       class="btn btn-primary">⬇️ הורד את האפליקציה</a>
+    <a href="https://github.com/israelheber675-prog/SwimTrack-Pro"
+       class="btn btn-ghost">📂 קוד מקור (GitHub)</a>
+  </div>
+  <div class="badges">
+    <span class="badge">Python 3.14</span>
+    <span class="badge">Streamlit 1.56</span>
+    <span class="badge">SQLite</span>
+    <span class="badge">V28</span>
+    <span class="badge">87 בדיקות ✓</span>
+    <span class="badge">RTL עברית</span>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-title">🌟 תכונות <span>מרכזיות</span></div>
+  <div class="features">
+    <div class="feature-card">
+      <div class="feature-icon">👑</div>
+      <div class="feature-title">Dual Super-Admin</div>
+      <div class="feature-desc">שני המשתמשים הראשונים מקבלים אוטומטית הרשאות סופר-מנהל. ניהול מלא של כל המערכת.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📚</div>
+      <div class="feature-title">סילבוס חכם – 13 שלבים</div>
+      <div class="feature-desc">סילבוס שחייה מובנה עם 72 משימות ב-13 שלבים. תמיכה בהעלאת סילבוס מותאם (CSV) לכל נושא.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">✅</div>
+      <div class="feature-title">נוכחות וקרדיטים</div>
+      <div class="feature-desc">סימון נוכחות מנכה קרדיט אוטומטית. התראה על גרעון בשיעורים פרטיים. שחזור בביטול נוכחות.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💬</div>
+      <div class="feature-title">צ'אט היררכי ובטוח</div>
+      <div class="feature-desc">תקשורת לפי היררכיה. פילטר שפה אוטומטי (רשימה שחורה). חסימת מדיה. התראות לסופר-מנהל.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📱</div>
+      <div class="feature-title">דוחות WhatsApp – 6 שפות</div>
+      <div class="feature-desc">יצירת דוחות בעברית, אנגלית, ערבית, רוסית, צרפתית וספרדית. אפשרות המלצת מוצר מהחנות.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">✍️</div>
+      <div class="feature-title">חתימות הורים שנתיות</div>
+      <div class="feature-desc">חתימה דיגיטלית ציורית על מסך המגע. תוקף שנה. מעקב אוטומטי אחר חתימות חסרות.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🏊</div>
+      <div class="feature-title">שיבוץ נתיבים</div>
+      <div class="feature-desc">מפה גרפית ותפריט רשימה לשיבוץ תלמידים לנתיבים. צבעי רמה לפי התקדמות.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📁</div>
+      <div class="feature-title">ניהול קבצים מקומי</div>
+      <div class="feature-desc">העלאת קבצים, דפדוף בתיקיות המחשב, ייבוא CSV ישיר לסילבוס ולתלמידים.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🛒</div>
+      <div class="feature-title">חנות ומלאי</div>
+      <div class="feature-desc">חנות מוצרים (ניהול ע"י סופר-מנהל). מלאי ציוד עם קטגוריות מותאמות והתראות מלאי נמוך.</div>
+    </div>
+  </div>
+</section>
+
+<!-- SETUP -->
+<section id="setup">
+  <div class="section-title">🚀 <span>התקנה</span> בארבעה שלבים</div>
+  <div class="steps-grid">
+    <div class="step-card">
+      <div class="step-num">1</div>
+      <div class="step-title">הורד את הקוד</div>
+      <div class="step-desc">לחץ על "הורד את האפליקציה" למעלה, או שכפל מ-GitHub</div>
+      <div class="step-code">git clone https://github.com/israelheber675-prog/SwimTrack-Pro.git</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">2</div>
+      <div class="step-title">התקן Python</div>
+      <div class="step-desc">יש צורך ב-Python 3.10 ומעלה. הורד מ-python.org</div>
+      <div class="step-code">python --version</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">3</div>
+      <div class="step-title">הפעל את start.bat</div>
+      <div class="step-desc">לחץ פעמיים על start.bat – הוא מתקין הכל ופותח את הדפדפן אוטומטית</div>
+      <div class="step-code">start.bat</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">4</div>
+      <div class="step-title">הירשם כסופר-מנהל</div>
+      <div class="step-desc">שני הנרשמים הראשונים מקבלים סופר-מנהל אוטומטית</div>
+      <div class="step-code">http://localhost:8501</div>
+    </div>
+  </div>
+</section>
+
+<!-- ROLES -->
+<section id="roles">
+  <div class="section-title">👥 <span>תפקידים</span> במערכת</div>
+  <div class="roles-grid">
+    <div class="role-card">
+      <div class="role-badge badge-super">👑 סופר-מנהל</div>
+      <div class="role-name">שני המשתמשים הראשונים</div>
+      <ul class="role-perms">
+        <li>ניהול כל המשתמשים</li>
+        <li>חנות – הוספת מוצרים</li>
+        <li>צפייה בכל ההתראות</li>
+        <li>מחיקת נתונים ישנים</li>
+        <li>גישה לכל הדוחות</li>
+        <li>ניהול כל הקבוצות</li>
+      </ul>
+    </div>
+    <div class="role-card">
+      <div class="role-badge badge-mgr">🏅 מנהל</div>
+      <div class="role-name">בחירה בהרשמה</div>
+      <ul class="role-perms">
+        <li>פתיחת קבוצות חדשות</li>
+        <li>הוספת תלמידים</li>
+        <li>ניהול קרדיטים</li>
+        <li>שליחת פידבק למדריכים</li>
+        <li>דוחות WhatsApp</li>
+        <li>ניהול מלאי</li>
+      </ul>
+    </div>
+    <div class="role-card">
+      <div class="role-badge badge-inst">🏊 מדריך</div>
+      <div class="role-name">בחירה בהרשמה</div>
+      <ul class="role-perms">
+        <li>פתיחת קבוצות שלו</li>
+        <li>הוספת תלמידים</li>
+        <li>סימון נוכחות יומית</li>
+        <li>עדכון התקדמות סילבוס</li>
+        <li>שיבוץ נתיבים</li>
+        <li>שעון כניסה/יציאה</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p>SwimTrack Pro V28 &nbsp;|&nbsp;
+     <a href="https://github.com/israelheber675-prog/SwimTrack-Pro">קוד מקור ב-GitHub</a>
+     &nbsp;|&nbsp; Built with ❤️ + 🤖
+  </p>
+  <p style="margin-top:8px;font-size:0.75rem;">
+    הנתונים נשמרים מקומית על המחשב שלך בלבד. לא נשלח מידע לשרתים חיצוניים.
+  </p>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SwimTrack Pro – הפעלה</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      direction: rtl;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 24px;
+      padding: 48px 40px;
+      max-width: 520px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+
+    .logo { font-size: 5rem; margin-bottom: 12px; }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #4ECDC4;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      color: rgba(255,255,255,0.6);
+      font-size: 0.95rem;
+      margin-bottom: 36px;
+    }
+
+    /* Status indicator */
+    .status-box {
+      background: rgba(0,0,0,0.3);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 28px;
+      border: 2px solid transparent;
+      transition: border-color 0.3s;
+    }
+    .status-box.ok     { border-color: #4CAF50; }
+    .status-box.warn   { border-color: #FF9800; }
+    .status-box.error  { border-color: #f44336; }
+    .status-box.check  { border-color: #4ECDC4; }
+
+    .status-dot {
+      display: inline-block;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      margin-left: 8px;
+      background: #888;
+      vertical-align: middle;
+    }
+    .dot-ok    { background: #4CAF50; box-shadow: 0 0 8px #4CAF50; animation: pulse 1.5s infinite; }
+    .dot-warn  { background: #FF9800; }
+    .dot-error { background: #f44336; }
+    .dot-spin  { background: #4ECDC4; animation: spin-dot 1s linear infinite; }
+
+    @keyframes pulse {
+      0%,100% { opacity:1; } 50% { opacity:0.4; }
+    }
+    @keyframes spin-dot {
+      0%  { transform: scale(1); }
+      50% { transform: scale(1.6); }
+      100%{ transform: scale(1); }
+    }
+
+    .status-text { font-size: 1rem; color: #ddd; }
+    .status-sub  { font-size: 0.8rem; color: rgba(255,255,255,0.45); margin-top: 4px; }
+
+    /* Buttons */
+    .btn {
+      display: inline-block;
+      padding: 14px 32px;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      text-decoration: none;
+      margin: 6px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4ECDC4, #44a8a1);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(78,205,196,0.4);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(78,205,196,0.5); }
+    .btn-primary:disabled { opacity: 0.5; cursor: default; transform: none; }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.12);
+      color: #ddd;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.2); }
+
+    /* Steps */
+    .steps { text-align: right; margin: 20px 0; }
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      padding: 12px 16px;
+    }
+    .step-num {
+      background: #4ECDC4;
+      color: #000;
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: bold; font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .step-text { font-size: 0.88rem; color: rgba(255,255,255,0.8); line-height: 1.5; }
+    .step-text code {
+      background: rgba(78,205,196,0.2);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.82rem;
+      color: #4ECDC4;
+      direction: ltr;
+      display: inline-block;
+    }
+
+    /* Counter */
+    #counter { color: #4ECDC4; font-weight: bold; }
+
+    /* Port badge */
+    .port-badge {
+      display: inline-block;
+      background: rgba(78,205,196,0.2);
+      color: #4ECDC4;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      margin-top: 6px;
+    }
+
+    /* Version */
+    .version { color: rgba(255,255,255,0.3); font-size: 0.75rem; margin-top: 24px; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo">🏊</div>
+  <h1>SwimTrack Pro</h1>
+  <p class="subtitle">מערכת ניהול שיעורי שחייה – V28</p>
+
+  <!-- Status Box -->
+  <div class="status-box check" id="statusBox">
+    <span class="status-dot dot-spin" id="statusDot"></span>
+    <span class="status-text" id="statusText">בודק חיבור לשרת...</span>
+    <div class="status-sub" id="statusSub">מנסה להתחבר ל-localhost:8501</div>
+  </div>
+
+  <!-- Main buttons -->
+  <div id="btnArea">
+    <a id="openBtn" class="btn btn-primary" href="http://localhost:8501" target="_blank" style="display:none">
+      🚀 פתח את האפליקציה
+    </a>
+    <button id="retryBtn" class="btn btn-secondary" onclick="startCheck()" style="display:none">
+      🔄 בדוק שוב
+    </button>
+  </div>
+
+  <!-- Steps (shown when server is offline) -->
+  <div class="steps" id="stepsArea" style="display:none">
+    <div style="font-size:0.85rem;color:rgba(255,255,255,0.5);margin-bottom:10px;">
+      לפתיחת האפליקציה:
+    </div>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text">
+        לחץ פעמיים על הקובץ <code>start.bat</code> בתיקיית הפרויקט
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text">
+        המתן לפתיחת חלון שחור – הדף יתחבר אוטומטית בעוד <span id="counter">10</span> שניות
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text">
+        לחץ <strong style="color:#4ECDC4">פתח את האפליקציה</strong> כשהכפתור יופיע
+      </div>
+    </div>
+  </div>
+
+  <div class="port-badge">🌐 localhost:8501</div>
+  <div class="version">SwimTrack Pro V28 &nbsp;|&nbsp; כל הזכויות שמורות</div>
+</div>
+
+<script>
+  const PORT = 8501;
+  const URL  = `http://localhost:${PORT}`;
+  let checkInterval = null;
+  let countdown = 10;
+  let countTimer = null;
+  let serverWasOnline = false;
+
+  async function pingServer() {
+    try {
+      const ctrl = new AbortController();
+      const tid  = setTimeout(() => ctrl.abort(), 2000);
+      await fetch(URL, { mode: 'no-cors', signal: ctrl.signal });
+      clearTimeout(tid);
+      return true;
+    } catch { return false; }
+  }
+
+  function setStatus(state, text, sub) {
+    const box  = document.getElementById('statusBox');
+    const dot  = document.getElementById('statusDot');
+    const stxt = document.getElementById('statusText');
+    const ssub = document.getElementById('statusSub');
+
+    box.className = 'status-box ' + state;
+    dot.className = 'status-dot ' + {
+      ok: 'dot-ok', warn: 'dot-warn', error: 'dot-error', check: 'dot-spin'
+    }[state];
+    stxt.textContent = text;
+    ssub.textContent = sub || '';
+  }
+
+  function onOnline() {
+    setStatus('ok', '✅ השרת פועל!', 'הדף מוכן לפתיחה →');
+    document.getElementById('openBtn').style.display = 'inline-block';
+    document.getElementById('retryBtn').style.display = 'none';
+    document.getElementById('stepsArea').style.display = 'none';
+    if (!serverWasOnline) {
+      serverWasOnline = true;
+      setTimeout(() => window.open(URL, '_blank'), 800);
+    }
+  }
+
+  function onOffline() {
+    setStatus('error', '⚠️ השרת לא פועל', 'הפעל את start.bat ואז רענן');
+    document.getElementById('openBtn').style.display = 'none';
+    document.getElementById('retryBtn').style.display = 'inline-block';
+    document.getElementById('stepsArea').style.display = 'block';
+    startCountdown();
+  }
+
+  function startCountdown() {
+    if (countTimer) clearInterval(countTimer);
+    countdown = 10;
+    const el = document.getElementById('counter');
+    if (el) el.textContent = countdown;
+    countTimer = setInterval(() => {
+      countdown--;
+      if (el) el.textContent = Math.max(0, countdown);
+      if (countdown <= 0) {
+        clearInterval(countTimer);
+        startCheck();
+      }
+    }, 1000);
+  }
+
+  async function startCheck() {
+    setStatus('check', 'בודק חיבור...', `מנסה להתחבר ל-localhost:${PORT}`);
+    if (countTimer) { clearInterval(countTimer); }
+
+    const online = await pingServer();
+    if (online) { onOnline(); }
+    else         { onOffline(); }
+  }
+
+  // Poll every 3 seconds
+  function startPolling() {
+    if (checkInterval) clearInterval(checkInterval);
+    checkInterval = setInterval(async () => {
+      const online = await pingServer();
+      if (online && !serverWasOnline) onOnline();
+    }, 3000);
+  }
+
+  // Init
+  startCheck();
+  startPolling();
+</script>
+</body>
+</html>
