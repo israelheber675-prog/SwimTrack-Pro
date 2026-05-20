@@ -5,7 +5,7 @@ import hashlib
 import os
 import secrets
 from datetime import datetime, date, timedelta
-from config import DB_PATH, SWIMMING_SYLLABUS, DATA_RETENTION_YEARS
+from config import DB_PATH, SWIMMING_SYLLABUS, DATA_RETENTION_YEARS, PRE_SEEDED_ADMINS
 
 
 # ─── Connection ───────────────────────────────────────────────────────────────
@@ -40,16 +40,18 @@ def init_db():
 
     c.executescript("""
     CREATE TABLE IF NOT EXISTS users (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        name        TEXT NOT NULL,
-        email       TEXT UNIQUE,
-        phone       TEXT UNIQUE,
-        password_hash TEXT NOT NULL,
-        salt        TEXT NOT NULL,
-        role        TEXT NOT NULL DEFAULT 'instructor',
-        is_active   INTEGER NOT NULL DEFAULT 1,
+        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+        name             TEXT NOT NULL,
+        email            TEXT UNIQUE,
+        phone            TEXT UNIQUE,
+        password_hash    TEXT NOT NULL,
+        salt             TEXT NOT NULL,
+        role             TEXT NOT NULL DEFAULT 'instructor',
+        is_active        INTEGER NOT NULL DEFAULT 1,
         first_login_done INTEGER NOT NULL DEFAULT 0,
-        created_at  TEXT NOT NULL
+        belongs_to_manager_id INTEGER,
+        created_at       TEXT NOT NULL,
+        FOREIGN KEY(belongs_to_manager_id) REFERENCES users(id)
     );
 
     CREATE TABLE IF NOT EXISTS groups (
@@ -218,15 +220,28 @@ def init_db():
     """)
 
     conn.commit()
+
+    # Migration: add belongs_to_manager_id if missing (for existing DBs)
+    cols = [row[1] for row in conn.execute("PRAGMA table_info(users)").fetchall()]
+    if "belongs_to_manager_id" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN belongs_to_manager_id INTEGER")
+        conn.commit()
+
     _seed_syllabus(conn)
+    _seed_pre_admins(conn)
     conn.close()
 
 
 def _seed_syllabus(conn):
+    """Seed or re-seed the swimming syllabus if counts don't match."""
     c = conn.cursor()
+    expected = sum(len(v) for v in SWIMMING_SYLLABUS.values())
     c.execute("SELECT COUNT(*) FROM syllabus WHERE subject='שחייה'")
-    if c.fetchone()[0] > 0:
-        return
+    existing = c.fetchone()[0]
+    if existing == expected:
+        return  # Already up to date
+    # Replace with updated syllabus
+    c.execute("DELETE FROM syllabus WHERE subject='שחייה'")
     order = 0
     for phase, tasks in SWIMMING_SYLLABUS.items():
         for task in tasks:
@@ -238,13 +253,35 @@ def _seed_syllabus(conn):
     conn.commit()
 
 
+def _seed_pre_admins(conn):
+    """Create pre-configured super admin accounts if they don't exist yet."""
+    if not PRE_SEEDED_ADMINS:
+        return
+    now = datetime.now().isoformat()
+    for admin in PRE_SEEDED_ADMINS:
+        existing = conn.execute(
+            "SELECT id FROM users WHERE email=?", (admin["email"],)
+        ).fetchone()
+        if existing:
+            # Ensure role is super_admin
+            conn.execute("UPDATE users SET role='super_admin' WHERE email=?", (admin["email"],))
+        else:
+            h, salt = hash_password(admin["password"])
+            conn.execute(
+                """INSERT INTO users (name,email,password_hash,salt,role,created_at)
+                   VALUES (?,?,?,?,'super_admin',?)""",
+                (admin["name"], admin["email"], h, salt, now),
+            )
+    conn.commit()
+
+
 # ─── Users ────────────────────────────────────────────────────────────────────
 
 def count_users(conn) -> int:
     return conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
 
 
-def create_user(conn, name, email, phone, password, role=None) -> int:
+def create_user(conn, name, email, phone, password, role=None, belongs_to_manager_id=None) -> int:
     now = datetime.now().isoformat()
     h, salt = hash_password(password)
     user_count = count_users(conn)
@@ -253,8 +290,10 @@ def create_user(conn, name, email, phone, password, role=None) -> int:
     else:
         assigned_role = role or "instructor"
     conn.execute(
-        "INSERT INTO users (name,email,phone,password_hash,salt,role,created_at) VALUES (?,?,?,?,?,?,?)",
-        (name, email or None, phone or None, h, salt, assigned_role, now),
+        """INSERT INTO users
+           (name,email,phone,password_hash,salt,role,belongs_to_manager_id,created_at)
+           VALUES (?,?,?,?,?,?,?,?)""",
+        (name, email or None, phone or None, h, salt, assigned_role, belongs_to_manager_id, now),
     )
     conn.commit()
     return conn.execute("SELECT last_insert_rowid()").fetchone()[0]

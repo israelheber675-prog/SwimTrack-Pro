@@ -16,10 +16,7 @@ def render(conn):
         _render_student_list(conn, role)
 
     with tab_add:
-        if role in ("super_admin", "manager"):
-            _render_add_student(conn)
-        else:
-            st.info("רק מנהלים יכולים להוסיף תלמידים")
+        _render_add_student(conn)
 
     with tab_search:
         _render_global_search(conn)

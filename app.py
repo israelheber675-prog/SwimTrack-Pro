@@ -118,6 +118,7 @@ NAV_ITEMS = [
     ("reports",     "📊 דוחות"),
     ("signatures",  "✍️ חתימות"),
     ("clock",       "⏱️ שעון"),
+    ("files",       "📁 קבצים"),
 ]
 
 # Super-admin only pages
@@ -254,6 +255,10 @@ elif page == "signatures":
 
 elif page == "clock":
     from modules.clock import render
+    render(conn)
+
+elif page == "files":
+    from modules.files import render
     render(conn)
 
 elif page == "alerts":

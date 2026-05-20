@@ -121,67 +121,145 @@ def _render_syllabus_view(conn):
 
 
 def _render_upload_syllabus(conn):
-    st.markdown("### ⬆️ העלאת סילבוס חדש")
-    st.info(
-        "📋 **תבנית קובץ CSV:**\n"
-        "```\nphase_name,subtask\n"
-        "שלב 1 – מבוא,משימה ראשונה\n"
-        "שלב 1 – מבוא,משימה שנייה\n"
-        "שלב 2 – ביניים,משימה ראשונה\n```\n\n"
-        "ה-AI יזהה אוטומטית את השלבים והמשימות."
-    )
+    st.markdown("### ⬆️ העלאת / עדכון סילבוס")
 
-    subject_name = st.text_input("שם הנושא החדש", placeholder="לדוגמה: רכיבה על סוסים")
+    with st.expander("📋 תבנית קובץ CSV – לחץ לפרטים"):
+        st.markdown(
+            "**פורמט שורה:** `שם_שלב,שם_משימה`\n\n"
+            "```\nphase_name,subtask\n"
+            "שלב 1 – מבוא,משימה ראשונה\n"
+            "שלב 1 – מבוא,משימה שנייה\n"
+            "שלב 2 – ביניים,משימה ראשונה\n```\n\n"
+            "ניתן גם להדביק טקסט חופשי – המערכת תנסה לזהות שלבים ומשימות אוטומטית."
+        )
 
-    upload_method = st.radio("שיטת הכנסה", ["📤 העלאת CSV", "✍️ הכנסה ידנית"])
+    existing_subjects = db.get_subjects(conn)
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        subject_name = st.text_input(
+            "שם הנושא",
+            placeholder="לדוגמה: שחייה / רכיבה על סוסים",
+        )
+    with col2:
+        st.write("")
+        st.write("")
+        if subject_name and subject_name in existing_subjects:
+            st.warning("קיים ✱")
+        elif subject_name:
+            st.success("חדש ✓")
+
+    replace_existing = False
+    if subject_name and subject_name in existing_subjects:
+        replace_existing = st.checkbox(
+            f"🔄 החלף את הסילבוס הקיים של **'{subject_name}'** בגרסה החדשה",
+            value=False,
+        )
+        if replace_existing:
+            st.warning(
+                "⚠️ כל המשימות הקיימות ייחלפו. היסטוריית התקדמות התלמידים **לא** תימחק."
+            )
+
+    upload_method = st.radio("שיטת הכנסה", ["📤 העלאת CSV", "✍️ הכנסה ידנית"], horizontal=True)
 
     if upload_method == "📤 העלאת CSV":
-        uploaded = st.file_uploader("בחר קובץ CSV", type=["csv", "txt"])
-        if uploaded and subject_name:
-            content = uploaded.read().decode("utf-8", errors="ignore")
-            lines = content.strip().split("\n")
-            parsed = []
-            order = 0
-            for line in lines:
-                parts = line.split(",", 1)
-                if len(parts) == 2:
-                    phase, task = parts[0].strip(), parts[1].strip()
-                    if phase and task and phase.lower() != "phase_name":
-                        parsed.append((phase, task, order))
-                        order += 1
+        _upload_csv(conn, subject_name, replace_existing)
+    else:
+        _manual_entry(conn, subject_name, replace_existing)
 
-            if parsed:
-                st.success(f"זוהו {len(parsed)} משימות")
-                df = pd.DataFrame(parsed, columns=["שלב", "משימה", "סדר"])
-                st.dataframe(df.drop(columns=["סדר"]), use_container_width=True, hide_index=True)
 
-                if st.button("✅ ייבא סילבוס", type="primary"):
-                    existing = db.get_syllabus(conn, subject_name)
-                    if existing:
-                        st.warning("סילבוס לנושא זה כבר קיים. אנא השתמש בשם ייחודי.")
-                    else:
-                        for phase, task, order_num in parsed:
-                            db.add_custom_syllabus(conn, subject_name, phase, task, order_num)
-                        st.success(f"✅ סילבוס '{subject_name}' נוסף בהצלחה!")
-                        st.rerun()
-            else:
-                st.error("לא ניתן לנתח את הקובץ. בדוק את הפורמט.")
+def _parse_csv_content(content: str) -> list:
+    """Parse CSV or free-text into list of (phase, task, order)."""
+    lines = content.strip().splitlines()
+    parsed = []
+    order = 0
+    current_phase = "שלב 1"
 
-    else:  # Manual
-        st.markdown("#### הכנסה ידנית")
-        phase = st.text_input("שם השלב", placeholder="שלב 1 – מבוא")
-        task = st.text_input("שם המשימה", placeholder="תיאור המשימה")
-        if st.button("➕ הוסף משימה") and subject_name and phase and task:
-            existing = db.get_syllabus(conn, subject_name)
-            order = len(existing)
-            db.add_custom_syllabus(conn, subject_name, phase, task, order)
-            st.success(f"✅ משימה נוספה: {task}")
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        # Standard CSV: phase,task
+        if "," in line:
+            parts = line.split(",", 1)
+            phase, task = parts[0].strip(), parts[1].strip()
+            if phase.lower() in ("phase_name", "שם_שלב", "שלב"):
+                continue  # header row
+            if phase and task:
+                current_phase = phase
+                parsed.append((phase, task, order))
+                order += 1
+        else:
+            # Free text: lines starting with "שלב" are phase headers; rest are tasks
+            import re
+            if re.match(r"^שלב\s*\d", line) or re.match(r"^phase\s*\d", line, re.I):
+                current_phase = line
+            elif len(line) > 3:
+                parsed.append((current_phase, line, order))
+                order += 1
+    return parsed
+
+
+def _upload_csv(conn, subject_name, replace_existing):
+    uploaded = st.file_uploader(
+        "בחר קובץ CSV / TXT",
+        type=["csv", "txt"],
+        key="syl_upload",
+    )
+    if not uploaded:
+        return
+    if not subject_name:
+        st.error("נא להזין שם נושא לפני הייבוא")
+        return
+
+    content = uploaded.read().decode("utf-8-sig", errors="ignore")
+    parsed = _parse_csv_content(content)
+
+    if not parsed:
+        st.error("לא ניתן לנתח את הקובץ. בדוק את הפורמט.")
+        return
+
+    st.success(f"זוהו **{len(parsed)}** משימות")
+    df = pd.DataFrame(parsed, columns=["שלב", "משימה", "סדר"])
+    st.dataframe(df.drop(columns=["סדר"]), use_container_width=True, hide_index=True)
+
+    btn_label = "🔄 החלף סילבוס" if replace_existing else "✅ ייבא סילבוס"
+    if st.button(btn_label, type="primary"):
+        if replace_existing:
+            conn.execute("DELETE FROM syllabus WHERE subject=?", (subject_name,))
+            conn.commit()
+        for phase, task, order_num in parsed:
+            db.add_custom_syllabus(conn, subject_name, phase, task, order_num)
+        action = "עודכן" if replace_existing else "נוסף"
+        st.success(f"✅ סילבוס '{subject_name}' {action} בהצלחה! ({len(parsed)} משימות)")
+        st.rerun()
+
+
+def _manual_entry(conn, subject_name, replace_existing):
+    st.markdown("#### ✍️ הכנסה ידנית")
+
+    if replace_existing:
+        if st.button("🗑️ מחק סילבוס קיים ופתח מחדש", type="secondary"):
+            conn.execute("DELETE FROM syllabus WHERE subject=?", (subject_name,))
+            conn.commit()
+            st.success("הסילבוס הקיים נמחק. הוסף משימות חדשות.")
             st.rerun()
 
-        # Preview current custom syllabus
-        if subject_name:
-            current = db.get_syllabus(conn, subject_name)
-            if current:
-                st.markdown(f"**סילבוס '{subject_name}' עד כה:**")
-                for it in current:
-                    st.write(f"• {it['phase_name']} → {it['subtask']}")
+    phase = st.text_input("שם השלב", placeholder="שלב 1 – מבוא", key="man_phase")
+    task  = st.text_input("שם המשימה", placeholder="תיאור המשימה", key="man_task")
+    if st.button("➕ הוסף משימה") and subject_name and phase and task:
+        existing = db.get_syllabus(conn, subject_name)
+        db.add_custom_syllabus(conn, subject_name, phase, task, len(existing))
+        st.success(f"✅ משימה נוספה: {task}")
+        st.rerun()
+
+    if subject_name:
+        current = db.get_syllabus(conn, subject_name)
+        if current:
+            st.markdown(f"**סילבוס '{subject_name}' עד כה – {len(current)} משימות:**")
+            phases_d = {}
+            for it in current:
+                phases_d.setdefault(it["phase_name"], []).append(it["subtask"])
+            for ph, tasks in phases_d.items():
+                st.markdown(f"*{ph}*")
+                for t in tasks:
+                    st.write(f"  • {t}")

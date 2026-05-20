@@ -15,10 +15,7 @@ def render(conn):
         _render_active_groups(conn, role)
 
     with tab_new:
-        if role in ("super_admin", "manager"):
-            _render_new_group(conn)
-        else:
-            st.info("רק מנהלים יכולים לפתוח קבוצות חדשות")
+        _render_new_group(conn)
 
     with tab_archived:
         _render_archived_groups(conn, role)
@@ -30,7 +27,16 @@ def _render_active_groups(conn, role):
         st.info("אין קבוצות פעילות. פתחו קבוצה חדשה!")
         return
 
+    user_id = st.session_state.user_id
+
     for g in groups:
+        # Instructors see only their own groups
+        is_my_group = (g["instructor_id"] == user_id or
+                       g["manager_id"] == user_id or
+                       role in ("super_admin", "manager"))
+        if not is_my_group:
+            continue
+
         with st.expander(f"🏊 {g['name']}  |  {g['subject']}", expanded=False):
             col1, col2, col3 = st.columns([2, 2, 1])
             with col1:
@@ -50,7 +56,7 @@ def _render_active_groups(conn, role):
                     st.caption(names)
 
             with col3:
-                if role in ("super_admin", "manager"):
+                if role in ("super_admin", "manager") or g["instructor_id"] == user_id:
                     if st.button("🔒 ארכב", key=f"arch_{g['id']}"):
                         st.session_state[f"confirm_arch_{g['id']}"] = True
 
@@ -68,7 +74,7 @@ def _render_active_groups(conn, role):
                                 del st.session_state[f"confirm_arch_{g['id']}"]
                                 st.rerun()
 
-            # Assign instructor
+            # Assign instructor – managers and admins only
             if role in ("super_admin", "manager"):
                 st.divider()
                 instructors = db.get_users_by_role(conn, "instructor")
@@ -90,6 +96,9 @@ def _render_new_group(conn):
     st.markdown("### ➕ פתיחת קבוצה חדשה")
     st.info("⚠️ שינוי נושא מחייב פתיחת קבוצה חדשה. נתוני הקבוצה הקיימת יישמרו בארכיון.")
 
+    role = st.session_state.user_role
+    user_id = st.session_state.user_id
+
     subjects_in_db = list(db.get_subjects(conn))
     default_subjects = ["שחייה", "רכיבה על סוסים", "כדורגל", "כדורסל", "אמנויות לחימה", "אחר"]
     all_subjects = list(dict.fromkeys(default_subjects + subjects_in_db))
@@ -99,16 +108,26 @@ def _render_new_group(conn):
         subject_sel = st.selectbox("נושא *", all_subjects)
         custom_subject = st.text_input("נושא מותאם (אם בחרת 'אחר')", placeholder="שם הנושא")
 
-        managers = db.get_users_by_role(conn, "manager")
-        super_admins = db.get_users_by_role(conn, "super_admin")
-        mgr_options = list(managers) + list(super_admins)
-        mgr_map = {u["name"]: u["id"] for u in mgr_options}
-        mgr_sel = st.selectbox("מנהל קבוצה", list(mgr_map.keys()) if mgr_map else ["—"])
+        # Manager – admins/managers choose; instructors default to themselves as manager
+        if role in ("super_admin", "manager"):
+            managers = db.get_users_by_role(conn, "manager")
+            super_admins = db.get_users_by_role(conn, "super_admin")
+            mgr_options = list(managers) + list(super_admins)
+            mgr_map = {u["name"]: u["id"] for u in mgr_options}
+            mgr_sel = st.selectbox("מנהל קבוצה", list(mgr_map.keys()) if mgr_map else ["—"])
+            manager_id_field = mgr_map.get(mgr_sel) if mgr_map else user_id
+        else:
+            # Instructor: they are the manager of their own group
+            me = db.get_user(conn, user_id)
+            st.info(f"הקבוצה תירשם תחתך: **{me['name']}**")
+            manager_id_field = None  # will use user_id below
+            mgr_map = {}
 
+        # Instructor assignment
         instructors = db.get_users_by_role(conn, "instructor")
         inst_map = {u["name"]: u["id"] for u in instructors}
-        inst_opts = ["—"] + list(inst_map.keys())
-        inst_sel = st.selectbox("מדריך (אופציונלי)", inst_opts)
+        inst_opts = ["— אני המדריך —"] + list(inst_map.keys())
+        inst_sel = st.selectbox("מדריך", inst_opts)
 
         submitted = st.form_submit_button("צור קבוצה", use_container_width=True, type="primary")
 
@@ -117,8 +136,17 @@ def _render_new_group(conn):
             st.error("שם הקבוצה הוא שדה חובה")
             return
         subject = custom_subject.strip() if subject_sel == "אחר" and custom_subject else subject_sel
-        manager_id = mgr_map.get(mgr_sel) if mgr_sel != "—" else st.session_state.user_id
-        instructor_id = inst_map.get(inst_sel) if inst_sel != "—" else None
+
+        if role in ("super_admin", "manager"):
+            manager_id = manager_id_field or user_id
+        else:
+            manager_id = user_id   # instructor manages their own group
+
+        if inst_sel == "— אני המדריך —":
+            instructor_id = user_id
+        else:
+            instructor_id = inst_map.get(inst_sel)
+
         db.create_group(conn, name, subject, manager_id, instructor_id)
         st.success(f"✅ קבוצה **{name}** נוצרה בהצלחה!")
         st.rerun()
